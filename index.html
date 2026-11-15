@@ -161,6 +161,26 @@ const DEFAULT_BETS = [
       { kind:"h2h", stat:"RUSH_YDS", a:["Bijan Robinson"], b:["Emmett Johnson"], tieWins:false, odds:"-154",
         game:{away:"Chiefs", home:"Falcons"}, label:"Bijan Robinson > Emmett Johnson · Rush Yds" }
     ]
+  },
+  {
+    id: "fd-2026-11-15-nfl-big",
+    league: "nfl",
+    book: "FanDuel",
+    title: "FanDuel NFL parlay",
+    odds: "",
+    note: "Legs shown in screenshot · send the top of the slip for stake/odds",
+    date: "2026-11-15",
+    legs: [
+      { kind:"prop", players:["Christian McCaffrey","Javonte Williams"], stat:"TD", side:"over", line:0.5, game:{away:"49ers", home:"Cowboys"}, label:"McCaffrey + Javonte Williams · 1+ TD combined" },
+      { kind:"prop", players:["George Kittle","Christian McCaffrey"], stat:"REC", side:"over", line:6.5, game:{away:"49ers", home:"Cowboys"}, label:"Kittle + McCaffrey · 7+ Receptions combined" },
+      { kind:"h2h", stat:"REC_YDS", a:["Matthew Golden","Christian Watson"], b:["Justin Jefferson"], tieWins:true, odds:"-675", game:{away:"Vikings", home:"Packers"}, label:"Golden + Watson ≥ Jefferson · Rec Yds" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Josh Allen","James Cook"], b:["Breece Hall"], tieWins:true, odds:"-970", game:{away:"Bills", home:"Jets"}, label:"Allen + Cook ≥ Breece Hall · Rush Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Parker Washington"], b:["Gunnar Helm"], tieWins:true, odds:"-458", game:{away:"Jaguars", home:"Titans"}, label:"Parker Washington ≥ Gunnar Helm · Rec Yds" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Chuba Hubbard"], b:["Travis Etienne"], tieWins:true, odds:"-553", game:{away:"Panthers", home:"Saints"}, label:"Chuba Hubbard ≥ Travis Etienne · Rush Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Josh Downs"], b:["Olamide Zaccheaus"], tieWins:true, odds:"-308", game:{away:"Chiefs", home:"Falcons"}, label:"Josh Downs ≥ Olamide Zaccheaus · Rec Yds" },
+      { kind:"h2h", stat:"PASS_YDS", a:["Matthew Stafford"], b:["Carson Beck"], tieWins:true, odds:"-219", game:{away:"Rams", home:"Cardinals"}, label:"Stafford ≥ Carson Beck · Pass Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Ja'Marr Chase"], b:["Germie Bernard"], tieWins:true, odds:"-430", game:{away:"Steelers", home:"Bengals"}, label:"Ja'Marr Chase ≥ Germie Bernard · Rec Yds" }
+    ]
   }
 ];
 /* Leg kinds supported:
