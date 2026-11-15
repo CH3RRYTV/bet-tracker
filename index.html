@@ -713,10 +713,11 @@ function render(){
     else if(live||hits) overall=["live",`${hits}/${n} hit · ${n-miss} alive`];
     else overall=["","Pending"];
     // auto-hide finished bets: stay visible ~2 min after they settle, then tuck away
-    if(overall[1]==="Cashed" || overall[1]==="Dead"){
-      if(!SETTLED_AT[bk]){ SETTLED_AT[bk] = Date.now(); saveSettled(); }
-      if(Date.now()-SETTLED_AT[bk] > SETTLE_HIDE_MS){ hiddenCount++; if(!showSettled) return ""; }
-    } else if(SETTLED_AT[bk]){ delete SETTLED_AT[bk]; saveSettled(); }
+    const done = overall[1]==="Cashed" || overall[1]==="Dead";
+    if(done && lastOk && !SETTLED_AT[bk]){ SETTLED_AT[bk] = Date.now(); saveSettled(); }
+    // only un-settle on real data (never during the first render before scores load)
+    if(!done && lastOk && SETTLED_AT[bk] && b.legs.every(l=>!l.settled)){ delete SETTLED_AT[bk]; saveSettled(); }
+    if(SETTLED_AT[bk] && Date.now()-SETTLED_AT[bk] > SETTLE_HIDE_MS){ hiddenCount++; if(!showSettled) return ""; }
     VIEW.push({title:b.title||"Bet", odds:b.odds, overall, cashP, legs: b.legs.map((l,i)=>{
       LG = l.league; const g = findGame(l.game);
       let nums = "";
