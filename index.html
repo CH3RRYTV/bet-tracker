@@ -614,7 +614,7 @@ function evalLeg(l){
         <div class="h2h">
           <div class="side ${state!=="pre"?(aheadA?"ahead":"behind"):""}">
             <div class="who">${esc(l.a.join(" + "))}</div><div class="num">${A.total}</div><div class="det">${A.det}</div></div>
-          <div class="vs">≥<span class="diff">${diff>0?"+":""}${diff}</span></div>
+          <div class="vs">${l.tieWins?"≥":"&gt;"}<span class="diff">${diff>0?"+":""}${diff}</span></div>
           <div class="side ${state!=="pre"?(!aheadA?"ahead":"behind"):""}">
             <div class="who">${esc(l.b.join(" + "))}</div><div class="num">${B.total}</div><div class="det">${B.det}</div></div>
         </div>${projTxt}<div class="sub">${gameLine}${l.tieWins?" · tie wins":""}</div>`};
@@ -646,7 +646,7 @@ function evalLeg(l){
     const mine = isHome? g.home : g.away, opp = isHome? g.away : g.home;
     let val, target, txt, won, push=false, busted=false;
     if(l.kind==="spread"){ val = mine.score - opp.score + l.line; won = val>0; push = val===0; txt = `${esc(mine.abbr)} ${l.line>0?"+":""}${l.line} · margin ${mine.score-opp.score>0?"+":""}${mine.score-opp.score} → ${val>0?"covering by":"short by"} ${fmt(Math.abs(val))}`; }
-    if(l.kind==="ml"){ val = mine.score-opp.score; won = val>0; txt = `${esc(mine.abbr)} ML · ${val>0?"leading":"trailing"} by ${Math.abs(val)}`; }
+    if(l.kind==="ml"){ val = mine.score-opp.score; won = val>0; txt = `${esc(mine.abbr)} ML · ${val===0?"tied":(val>0?"leading by ":"trailing by ")+Math.abs(val)}`; }
     if(l.kind==="total"||l.kind==="teamTotal"){
       const pts = l.kind==="total" ? g.home.score+g.away.score : mine.score;
       const over = l.side!=="under", proj = g.state==="in"&&gameElapsedFrac(g)>=0.15 ? pts/gameElapsedFrac(g) : pts;
