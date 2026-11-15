@@ -147,21 +147,19 @@ const DEFAULT_BETS = [
     ]
   },
   {
-    id: "fd-2026-11-15-ne-det-sgp",
+    id: "dk-2026-11-15-nfl-4leg",
     league: "nfl",
-    book: "FanDuel",
-    title: "Patriots @ Lions SGP",
-    odds: "-134",
-    note: "Profit Boost 30% (was -176)",
-    stake: "50.00", toWin: "37.37",
+    book: "DraftKings",
+    title: "NFL 4 leg parlay",
+    odds: "",
+    note: "≈ +327 from the leg odds",
     date: "2026-11-15",
     legs: [
-      { kind:"prop", players:["Jahmyr Gibbs","Amon-Ra St. Brown"], stat:"TD", side:"over", line:0.5,
-        game:{away:"Patriots", home:"Lions"}, label:"Gibbs + St. Brown · 1+ TD combined" },
-      { kind:"h2h", stat:"REC_YDS", a:["Amon-Ra St. Brown"], b:["Hunter Henry"], tieWins:true,
-        game:{away:"Patriots", home:"Lions"}, label:"St. Brown ≥ Hunter Henry · Rec Yds" },
-      { kind:"prop", players:["Sam LaPorta"], stat:"REC_YDS", side:"over", line:19.5,
-        game:{away:"Patriots", home:"Lions"}, label:"LaPorta 20+ Rec Yds" }
+      { kind:"ml", team:"Texans",  game:{away:"Texans",  home:"Browns"}, odds:"-225" },
+      { kind:"ml", team:"Bills",   game:{away:"Bills",   home:"Jets"},   odds:"-470" },
+      { kind:"ml", team:"Jaguars", game:{away:"Jaguars", home:"Titans"}, odds:"-750" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Bijan Robinson"], b:["Emmett Johnson"], tieWins:false, odds:"-154",
+        game:{away:"Chiefs", home:"Falcons"}, label:"Bijan Robinson > Emmett Johnson · Rush Yds" }
     ]
   }
 ];
@@ -187,7 +185,8 @@ const store = {
   set(b){ try{ localStorage.setItem("betTracker.bets", JSON.stringify(b)); }catch(e){} }
 };
 function normalizeBets(arr){ (arr||[]).forEach(b=>{ b.league = (b.league||"nba").toLowerCase(); (b.legs||[]).forEach(l=>{ l.league = (l.league||b.league).toLowerCase(); }); }); return arr; }
-let BETS = normalizeBets((()=>{ const saved = store.get(); if(!saved) return DEFAULT_BETS;
+const RETIRED = ["fd-2026-11-15-ne-det-sgp"];
+let BETS = normalizeBets((()=>{ const saved0 = store.get(); const saved = saved0 && saved0.filter(b=>!RETIRED.includes(b.id)); if(!saved) return DEFAULT_BETS;
   const removed = (()=>{ try{ return JSON.parse(localStorage.getItem("betTracker.removed")||"[]"); }catch(e){ return []; } })();
   return saved.concat(DEFAULT_BETS.filter(d=>!removed.includes(d.id) && !saved.some(b=>b.id===d.id))); })());
 
