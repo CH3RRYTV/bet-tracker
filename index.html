@@ -366,12 +366,12 @@ async function refresh(){
           const cs = comp.competitors||[];
           const home = cs.find(c=>c.homeAway==="home"), away = cs.find(c=>c.homeAway==="away");
           const st = ev.status||comp.status||{};
-          const team = c => ({name: c?.team?.name||c?.team?.shortDisplayName||"", full: c?.team?.displayName||"", abbr: c?.team?.abbreviation||"", score: +c?.score||0});
+          const team = c => ({name: c?.team?.name||c?.team?.shortDisplayName||"", full: c?.team?.displayName||"", abbr: c?.team?.abbreviation||"", score: +c?.score||0, tid: c?.team?.id||c?.id});
           newGames[`${lg}:${ev.id}`] = {
             lg, id: ev.id, date: d, home: team(home), away: team(away),
             state: st.type?.state, detail: st.type?.shortDetail || st.type?.detail || "",
             period: st.period, clock: st.clock, start: ev.date,
-            poss: comp.situation?.possession, downDist: comp.situation?.shortDownDistanceText, redZone: !!comp.situation?.isRedZone
+            poss: comp.situation?.possession, downDist: comp.situation?.shortDownDistanceText, downText: comp.situation?.downDistanceText, redZone: !!comp.situation?.isRedZone
           };
         }
       }
@@ -384,7 +384,10 @@ async function refresh(){
     await Promise.all(toFetch.map(async g=>{
       try{
         if(g.lg==="ufc"){ await loadFightStats(g); return; }
-        const sm = await getJSON(`${LEAGUES[g.lg].api}/summary?event=${g.id}`); (g.lg==="nfl"?parseBoxNFL:parseBoxNBA)(sm, g); }
+        const sm = await getJSON(`${LEAGUES[g.lg].api}/summary?event=${g.id}`); (g.lg==="nfl"?parseBoxNFL:parseBoxNBA)(sm, g);
+        const wp = (sm.winprobability||[]).slice(-1)[0];
+        if(wp && wp.homeWinPercentage!=null && g.state==="in") g.homeWP = +wp.homeWinPercentage;
+      }
       catch(e){ console.warn("box", g.id, e); }
     }));
     await ensureSeasons();
@@ -495,6 +498,17 @@ function sideProj(names, stat, g){
 }
 const Phi = z => { const t=1/(1+0.2316419*Math.abs(z)), d=0.3989423*Math.exp(-z*z/2);
   const q=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-q:q; };
+// inverse standard normal (Acklam)
+function invPhi(p){
+  const a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],
+        b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],
+        c=[-0.00778489400243029,-0.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],
+        d=[0.00778469570904146,0.32246712907004,2.445134137143,3.75440866190742], pl=0.02425;
+  let q,r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
 const teamIsHome = (g, team) => { const t = norm(team); return !!t && norm(g.home.name+" "+g.home.abbr+" "+g.home.full).split(" ").concat([norm(g.home.full)]).some(x=>x===t) || (!!t && norm(g.home.full).includes(t)); };
 const impliedProb = o => { const n=parseFloat(String(o||"").replace("+","")); if(isNaN(n)) return null; return n<0 ? -n/(-n+100) : 100/(n+100); };
 
@@ -536,6 +550,13 @@ function legProb(l, status){
   const rf = 1-f, isHome = teamIsHome(g, l.team), nfl = l.league==="nfl";
   const mine = isHome? g.home : g.away, opp = isHome? g.away : g.home, margin = mine.score-opp.score;
   const sdM = Math.max(0.5, (nfl?13.5:12.5)*Math.sqrt(rf));
+  if(g.homeWP!=null && (l.kind==="ml" || l.kind==="spread")){
+    const wpMine = Math.min(0.999, Math.max(0.001, isHome ? g.homeWP : 1-g.homeWP));
+    if(l.kind==="ml") return {p:wpMine, src:"espn", proj:"ESPN live win probability (includes possession, field position and time left)"};
+    // turn ESPN's win % into an expected final margin, then price the spread off it
+    const mu = sdM*invPhi(wpMine);
+    return {p:1-Phi((-(mu+l.line))/sdM), src:"espn", proj:`Based on ESPN live win probability (${Math.round(wpMine*100)}% to win)`};
+  }
   if(l.kind==="spread") return {p:1-Phi((-(margin+l.line))/sdM), src:"model"};
   if(l.kind==="ml") return {p:1-Phi((0.5-margin-0.5)/sdM), src:"model"};
   if(l.kind==="total"||l.kind==="teamTotal"){
@@ -677,7 +698,9 @@ function evalLeg(l){
       if(over && pts>l.line) return {status:"win", g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${gameLine}</div>`};
     }
     let status = g.state==="pre" ? "pending" : g.state==="post" ? (push?"push":won?"win":"loss") : (busted?"loss":"live");
-    return {status, g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${gameLine}</div>`};
+    const possTeam = g.lg==="nfl" && g.state==="in" && g.poss ? (String(g.poss)===String(g.home.tid) ? g.home.abbr : String(g.poss)===String(g.away.tid) ? g.away.abbr : "") : "";
+    const sit = possTeam ? `<div class="sub" style="color:var(--text)">🏈 ${esc(possTeam)} ball${g.downText?` · ${esc(g.downText)}`:""}${g.redZone?' · <b style="color:var(--loss)">RED ZONE</b>':""}</div>` : "";
+    return {status, g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div>${sit}<div class="sub">${gameLine}</div>`};
   }
   return {status:"pending", html:`<div class="sub">Unsupported leg</div>`};
 }
@@ -777,7 +800,7 @@ function render(){
       ${b.legs.map((l,i)=>`<div class="leg" data-leg="${bi}-${i}">
         <div class="lt"><span class="name">${esc(l.label || fullLabel(l))}</span>
         ${l.odds?`<span style="color:var(--muted);font-size:13px">${esc(l.odds)}</span>`:""}
-        <span class="prob" style="color:${pctColor(probs[i].p)}" title="${probs[i].src==="market"?"From the book's leg odds (pre-game)":"Live model"}">${pctTxt(probs[i].p)}</span>
+        <span class="prob" style="color:${pctColor(probs[i].p)}" title="${probs[i].src==="market"?"From the book's leg odds (pre-game)":probs[i].src==="espn"?"ESPN live win probability":"Live model"}">${pctTxt(probs[i].p)}</span>
         <span class="pill ${PILL[legs[i].status][0]}">${PILL[legs[i].status][1]}</span></div>
         ${legs[i].html}${probs[i].proj?`<div class="proj">${esc(probs[i].proj)}</div>`:""}</div>`).join("")}
     </section>`;
