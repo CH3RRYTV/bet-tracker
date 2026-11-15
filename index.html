@@ -145,6 +145,24 @@ const DEFAULT_BETS = [
       { kind:"fightML", fighter:"Melquizael Costa", game:{away:"Jared Gordon", home:"Melquizael Costa"}, odds:"-281", settled:"win" },
       { kind:"fightML", fighter:"Amanda Nunes", game:{away:"Kayla Harrison", home:"Amanda Nunes"}, odds:"+154" }
     ]
+  },
+  {
+    id: "fd-2026-11-15-ne-det-sgp",
+    league: "nfl",
+    book: "FanDuel",
+    title: "Patriots @ Lions SGP",
+    odds: "-134",
+    note: "Profit Boost 30% (was -176)",
+    stake: "50.00", toWin: "37.37",
+    date: "2026-11-15",
+    legs: [
+      { kind:"prop", players:["Jahmyr Gibbs","Amon-Ra St. Brown"], stat:"TD", side:"over", line:0.5,
+        game:{away:"Patriots", home:"Lions"}, label:"Gibbs + St. Brown · 1+ TD combined" },
+      { kind:"h2h", stat:"REC_YDS", a:["Amon-Ra St. Brown"], b:["Hunter Henry"], tieWins:true,
+        game:{away:"Patriots", home:"Lions"}, label:"St. Brown ≥ Hunter Henry · Rec Yds" },
+      { kind:"prop", players:["Sam LaPorta"], stat:"REC_YDS", side:"over", line:19.5,
+        game:{away:"Patriots", home:"Lions"}, label:"LaPorta 20+ Rec Yds" }
+    ]
   }
 ];
 /* Leg kinds supported:
@@ -700,6 +718,8 @@ function render(){
   el.innerHTML = BETS.map((b,bi)=>{
     const legs = b.legs.map(evalLeg);
     const probs = b.legs.map((l,i)=>legProb(l, legs[i].status));
+    const parlayP = impliedProb(b.odds);
+    if(parlayP!=null) probs.forEach((x,i)=>{ if(x.p==null && x.src==="market") { x.p = Math.pow(parlayP, 1/b.legs.length); x.src="market"; } });
     const allKnown = probs.every(x=>x.p!=null);
     const cashP = allKnown ? probs.reduce((s,x)=>s*x.p,1) : null;
     const bk = b.id||b.title||bi;
