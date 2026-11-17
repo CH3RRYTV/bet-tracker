@@ -182,6 +182,23 @@ const DEFAULT_BETS = [
       { kind:"h2h", stat:"REC_YDS", a:["Ja'Marr Chase"], b:["Germie Bernard"], tieWins:true, odds:"-430", game:{away:"Steelers", home:"Bengals"}, label:"Ja'Marr Chase ≥ Germie Bernard · Rec Yds" }
     ]
   }
+  ,{
+    id: "fd-2026-11-16-lac-bal-sgp",
+    league: "nfl",
+    book: "FanDuel",
+    title: "Chargers @ Ravens SGP",
+    odds: "+132",
+    note: "Profit Boost 30% (was -102)",
+    date: "2026-11-16",
+    legs: [
+      { kind:"h2h", stat:"REC_YDS", a:["Zay Flowers"], b:["KeAndre Lambert-Smith"], tieWins:true,
+        game:{away:"Chargers", home:"Ravens"}, label:"Zay Flowers ≥ KeAndre Lambert-Smith · Rec Yds" },
+      { kind:"prop", players:["Derrick Henry"], stat:"RUSH_YDS", side:"over", line:39.5,
+        game:{away:"Chargers", home:"Ravens"}, label:"Derrick Henry 40+ Rush Yds" },
+      { kind:"prop", players:["Derrick Henry"], stat:"TD", side:"over", line:0.5,
+        game:{away:"Chargers", home:"Ravens"}, label:"Derrick Henry · Anytime TD" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
