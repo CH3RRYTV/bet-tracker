@@ -1060,6 +1060,17 @@ document.getElementById("dlgReplace").onclick = ()=>loadFromBox(true);
 
 render();
 refresh();
+
+// Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
+const BUILD = "20261116203350";
+setInterval(async ()=>{
+  try{
+    if(location.protocol==="file:") return;
+    const txt = await (await fetch(location.pathname+"?check="+Date.now(), {cache:"no-store"})).text();
+    const m = txt.match(/BUILD\s=\s"(\d+)"/);
+    if(m && m[1]!==BUILD){ toast("Tracker updated", "Loading the newest version…", "good"); setTimeout(()=>location.replace(location.pathname+"?v="+m[1]), 1500); }
+  }catch(e){}
+}, 60000);
 // Timer in a Web Worker so updates keep coming while you watch the game in another tab or full screen
 (function startTicker(){
   try{
