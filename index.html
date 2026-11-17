@@ -199,6 +199,23 @@ const DEFAULT_BETS = [
         game:{away:"Chargers", home:"Ravens"}, label:"Derrick Henry · Anytime TD" }
     ]
   }
+  ,{
+    id: "dk-2026-11-16-nba-3leg",
+    league: "nba",
+    book: "DraftKings",
+    title: "NBA parlay",
+    odds: "",
+    note: "Legs from screenshot · send the top of the slip for stake/odds",
+    date: "2026-11-16",
+    legs: [
+      { kind:"prop", players:["Franz Wagner"], stat:"AST", side:"over", line:4.5, odds:"-509",
+        game:{away:"Magic", home:"Celtics"}, label:"Franz Wagner 5+ Assists" },
+      { kind:"prop", players:["Nikola Jokic"], stat:"DD", side:"over", line:1.5, odds:"-518",
+        game:{away:"Suns", home:"Nuggets"}, label:"Nikola Jokic · Double-Double" },
+      { kind:"prop", players:["Jaden McDaniels"], stat:"PRA", side:"over", line:19.5, odds:"-412",
+        game:{away:"Trail Blazers", home:"Timberwolves"}, label:"Jaden McDaniels 20+ Pts+Reb+Ast" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -236,7 +253,7 @@ const fmt = n => (Math.round(n*10)/10).toString();
 const num0 = v => { const x = parseFloat(String(v??"").replace(/,/g,"")); return isNaN(x)?0:x; };
 
 const STAT_LABEL = {PTS:"Points",REB:"Rebounds",AST:"Assists","3PM":"Threes",STL:"Steals",BLK:"Blocks",TO:"Turnovers",
-  PRA:"Pts+Reb+Ast",PR:"Pts+Reb",PA:"Pts+Ast",RA:"Reb+Ast",STOCKS:"Stl+Blk",
+  PRA:"Pts+Reb+Ast", DD:"cats at 10+ (double-double)",PR:"Pts+Reb",PA:"Pts+Ast",RA:"Reb+Ast",STOCKS:"Stl+Blk",
   // NFL
   PASS_YDS:"Pass Yds", PASS_TD:"Pass TDs", CMP:"Completions", ATT:"Pass Att", INT:"INTs Thrown",
   RUSH_YDS:"Rush Yds", RUSH_ATT:"Rush Att", RUSH_TD:"Rush TDs", REC:"Receptions", REC_YDS:"Rec Yds", REC_TD:"Rec TDs", TGT:"Targets",
@@ -344,6 +361,7 @@ function findGame(gm, lg=LG){
 
 function statVal(p, stat){
   if(!p) return 0;
+  if(stat==="DD") return ["PTS","REB","AST","STL","BLK"].filter(k=>(p[k]||0)>=10).length;
   if(COMBO[stat]) return COMBO[stat].reduce((s,k)=>s+(p[k]||0),0);
   return p[stat]||0;
 }
@@ -556,6 +574,13 @@ function legProb(l, status){
       if(cur>l.line) return {p: over?1:0, src:"model"};
       const base = mkt ?? 0.5, pOver = over ? base*(1-f) : 1-(1-base)*(1-f);
       return {p: over? pOver : pOver, src:"model", proj:"Longest so far: "+cur};
+    }
+    if(l.stat==="DD"){   // chance at least two of PTS/REB/AST reach 10
+      const ps = ["PTS","REB","AST"].map(c=>{ const pr = playerProj(l.players[0], c, g), need = 10 - pr.cur;
+        if(need<=0) return 1; const d = countDist(pr.mean, pr.v); let q=0; for(let x=need;x<d.length;x++) q+=d[x]; return q; });
+      const [a,b,c] = ps, atLeast2 = a*b + a*c + b*c - 2*a*b*c;
+      const pl = findPlayer(l.players[0]);
+      return {p: atLeast2, src:"model", proj: pl ? `Now: ${pl.PTS} pts · ${pl.REB} reb · ${pl.AST} ast — chance each reaches 10: ${ps.map(x=>Math.round(x*100)+"%").join(" / ")}` : "Needs two of points, rebounds, assists at 10+"};
     }
     const S0 = sideProj(l.players,l.stat,g);
     if(S0.cont){ const sd=Math.sqrt(Math.max(S0.v,1)), mu=S0.cur+S0.mean, pOver=1-Phi((l.line-mu)/sd);
