@@ -366,7 +366,7 @@ async function refresh(){
     for(const lg in want){
       if(!LEAGUES[lg]) continue;
       for(const d of want[lg]){
-        const sb = await getJSON(lg==="ufc" ? `${LEAGUES[lg].api}/scoreboard` : `${LEAGUES[lg].api}/scoreboard?dates=${ymd(d)}`);
+        const sb = await getJSON(`${LEAGUES[lg].api}/scoreboard?dates=${ymd(d)}`);
         if(lg==="ufc"){
           for(const ev of (sb.events||[])) for(const c of (ev.competitions||[])){
             const st = c.status||{}, cs = c.competitors||[];
