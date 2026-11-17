@@ -294,7 +294,7 @@ function parseBoxNBA(summary, g){
           STL: num("STL"), BLK: num("BLK"), TO: num("TO"), PF: num("PF"),
           "3PM": num("3PT"), OREB: num("OREB"), DREB: num("DREB")
         };
-        players.nba[norm(line.name)] = line;
+        players.nba[g.id+"|"+norm(line.name)] = line;
       }
     }
   }
@@ -316,7 +316,7 @@ function parseBoxNFL(summary, g){
       const keys = cat.keys || [];
       for(const a of (cat.athletes||[])){
         const nm = a.athlete?.displayName || "", k = norm(nm);
-        const line = players.nfl[k] || (players.nfl[k] = {name:nm, id:a.athlete?.id, team:nick, abbr, gameId:g.id});
+        const gk = g.id+"|"+k; const line = players.nfl[gk] || (players.nfl[gk] = {name:nm, id:a.athlete?.id, team:nick, abbr, gameId:g.id});
         keys.forEach((key,i)=>{
           const dest = map[key]; if(!dest) return;
           const raw = (a.stats||[])[i];
@@ -340,12 +340,18 @@ async function loadFightStats(g){
   }));
   fightStats[g.id] = out;
 }
+let CURG = null;   // id of the game the leg being evaluated belongs to
 function findPlayer(name, lg=LG){
   const pool = players[lg] || {}, n = norm(name);
-  if(pool[n]) return pool[n];
   const parts = n.split(" "), last = parts[parts.length-1], fi = parts[0]?.[0];
-  for(const k in pool){ const kp=k.split(" "); if(kp[kp.length-1]===last && kp[0]?.[0]===fi) return pool[k]; }
-  return null;
+  let exact = [], loose = [];
+  for(const key in pool){
+    const [gid, nm] = [key.slice(0,key.indexOf("|")), key.slice(key.indexOf("|")+1)];
+    if(nm===n) exact.push([gid,pool[key]]);
+    else { const kp=nm.split(" "); if(kp[kp.length-1]===last && kp[0]?.[0]===fi) loose.push([gid,pool[key]]); }
+  }
+  const pick = arr => { if(!arr.length) return null; if(CURG){ const m = arr.find(x=>x[0]===String(CURG)); return m ? m[1] : null; } return arr[arr.length-1][1]; };
+  return pick(exact) || pick(loose);
 }
 
 function findGame(gm, lg=LG){
@@ -450,6 +456,7 @@ const NFL_SEASON_KEYS = {completions:"CMP", passingAttempts:"ATT", passingYards:
   receptions:"REC", receivingTargets:"TGT", receivingYards:"REC_YDS", receivingTouchdowns:"REC_TD"};
 function trackedPlayers(){ const out=[]; for(const b of BETS) for(const l of b.legs){ (l.a||[]).concat(l.b||[], l.players||[]).forEach(n=>out.push([n,l.league])); } return out; }
 async function ensureSeasons(){
+  CURG = null;
   const need = trackedPlayers().map(([n,lg])=>[findPlayer(n,lg),lg]).filter(([p,lg])=>p && p.id && !seasons[lg+":"+p.id]);
   await Promise.all(need.map(async ([p,lg])=>{
     try{
@@ -552,7 +559,7 @@ function legProb(l, status){
   if(status==="win") return {p:1, src:"final"};
   if(status==="loss") return {p:0, src:"final"};
   if(status==="void"||status==="push") return {p:1, src:"final"};
-  LG = l.league || "nba";
+  LG = l.league || "nba"; CURG = (findGame(l.game)||{}).id || null;
   if(l.kind==="fightML") return fightProb(l, findGame(l.game, "ufc"));
   const g = findGame(l.game);
   const mkt = impliedProb(l.odds);
@@ -656,7 +663,7 @@ function fightProb(l, g){
 /* ---------- Grading ---------- */
 // returns {status:'win'|'loss'|'push'|'live'|'pending'|'void', html}
 function evalLeg(l){
-  LG = l.league || "nba";
+  LG = l.league || "nba"; CURG = (findGame(l.game)||{}).id || null;
   if(l.settled) return {status: l.settled, html:`<div class="sub">Settled · ${l.settled==="win"?"won":l.settled==="loss"?"lost":l.settled}</div>`};
   if(l.kind==="fightML") return evalFight(l);
   const g = findGame(l.game);
@@ -823,7 +830,7 @@ function render(){
     if(!done && lastOk && SETTLED_AT[bk] && b.legs.every(l=>!l.settled)){ delete SETTLED_AT[bk]; saveSettled(); }
     if(SETTLED_AT[bk] && Date.now()-SETTLED_AT[bk] > SETTLE_HIDE_MS){ hiddenCount++; if(!showSettled) return ""; }
     VIEW.push({title:b.title||"Bet", odds:b.odds, overall, cashP, legs: b.legs.map((l,i)=>{
-      LG = l.league; const g = findGame(l.game);
+      LG = l.league; const g = findGame(l.game); CURG = g ? g.id : null;
       let nums = "";
       if(l.kind==="h2h"){ const A=l.a.reduce((s,n)=>s+statVal(findPlayer(n),l.stat),0), B=l.b.reduce((s,n)=>s+statVal(findPlayer(n),l.stat),0); nums = `${A}–${B}`; }
       else if(l.kind==="prop"){ nums = `${l.players.reduce((s,n)=>s+statVal(findPlayer(n),l.stat),0)}/${l.line}`; }
@@ -905,7 +912,7 @@ function alertsPass(){
   const snap = {};
   const events = [];
   BETS.forEach((b,bi)=>b.legs.forEach((l,i)=>{
-    LG = l.league;
+    LG = l.league; CURG = (findGame(l.game)||{}).id || null;
     const key = `${bi}-${i}`, sk = `${b.id||b.title||bi}-${i}`, statName = STAT_LABEL[l.stat]||l.stat;
     // which players matter and which direction is good for the bet
     let tracked = [];
