@@ -485,7 +485,7 @@ function playerProjNFL(name, stat, g){
   const cur = statVal(p, stat), f = gameElapsedFrac(g);
   const comps = COMBO[stat] || [stat];
   const r0 = comps.reduce((s,c)=>s + (season && season[c]!=null && season[c]>0 ? season[c] : (NFL_DEFAULT[c] ?? 0)), 0);
-  const k = 0.6, rate = g.state==="pre" ? r0 : (cur + k*r0)/(f + k);
+  const k = 1.5, rate = g.state==="pre" ? r0 : (cur + k*r0)/(f + k);
   let mean = g.state==="post" ? 0 : rate*(1-f);
   if(g.state==="in" && g.period>=4 && Math.abs(g.home.score-g.away.score)>=21) mean *= 0.6;   // garbage time
   const cont = NFL_YARDS[stat]!=null;
@@ -793,7 +793,7 @@ function render(){
     else overall=["","Pending"];
     // auto-hide finished bets: stay visible ~2 min after they settle, then tuck away
     const done = overall[1]==="Cashed" || overall[1]==="Dead";
-    if(done && lastOk && !SETTLED_AT[bk]){ SETTLED_AT[bk] = Date.now(); saveSettled(); }
+    if(done && lastOk && !SETTLED_AT[bk]){ const today = new Date().toLocaleDateString('en-CA'); SETTLED_AT[bk] = (b.date && b.date < today) ? 1 : Date.now(); saveSettled(); }
     // only un-settle on real data (never during the first render before scores load)
     if(!done && lastOk && SETTLED_AT[bk] && b.legs.every(l=>!l.settled)){ delete SETTLED_AT[bk]; saveSettled(); }
     if(SETTLED_AT[bk] && Date.now()-SETTLED_AT[bk] > SETTLE_HIDE_MS){ hiddenCount++; if(!showSettled) return ""; }
