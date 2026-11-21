@@ -216,6 +216,21 @@ const DEFAULT_BETS = [
         game:{away:"Trail Blazers", home:"Timberwolves"}, label:"Jaden McDaniels 20+ Pts+Reb+Ast" }
     ]
   }
+  ,{
+    id: "dk-2026-11-21-cfb-3pick",
+    league: "ncaaf",
+    book: "DraftKings",
+    title: "CFB 3 picks parlay",
+    odds: "-123",
+    stake: "30.00", toWin: "24.59",
+    date: "2026-11-21",
+    legs: [
+      { kind:"prop", players:["Bear Bachmeier"], stat:"PASS_RUSH_YDS", side:"over", line:219.5, odds:"-393",
+        game:{away:"BYU", home:"Kansas"}, label:"Bear Bachmeier 220+ Pass+Rush Yds" },
+      { kind:"ml", team:"USC", odds:"-950", game:{away:"Maryland", home:"USC"} },
+      { kind:"firstTD", team:"Miami", odds:"-320", game:{away:"Virginia Tech", home:"Miami"} }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -232,7 +247,8 @@ const REFRESH_MS = 15000;
 const LEAGUES = {
   nba: { api:"https://site.api.espn.com/apis/site/v2/sports/basketball/nba", ath:"basketball/nba", label:"NBA" },
   nfl: { api:"https://site.api.espn.com/apis/site/v2/sports/football/nfl",   ath:"football/nfl",   label:"NFL" },
-  ufc: { api:"https://site.api.espn.com/apis/site/v2/sports/mma/ufc",        ath:"mma",            label:"UFC" }
+  ufc: { api:"https://site.api.espn.com/apis/site/v2/sports/mma/ufc",        ath:"mma",            label:"UFC" },
+  ncaaf: { api:"https://site.api.espn.com/apis/site/v2/sports/football/college-football", ath:"football/college-football", label:"CFB", sbExtra:"&groups=80&limit=300" }
 };
 const store = {
   get(){ try{ const v = localStorage.getItem("betTracker.bets"); return v ? JSON.parse(v) : null; }catch(e){ return null; } },
@@ -264,7 +280,8 @@ const COMBO = {PRA:["PTS","REB","AST"],PR:["PTS","REB"],PA:["PTS","AST"],RA:["RE
 
 /* ---------- State ---------- */
 let games = {};                    // "lg:eventId" -> game info
-let players = {nba:{}, nfl:{}};    // league -> norm name -> player line
+let players = {nba:{}, nfl:{}, ncaaf:{}};
+const isFB = lg => lg==="nfl" || lg==="ncaaf";    // league -> norm name -> player line
 let fightStats = {};               // UFC competition id -> norm fighter name -> live stats
 let lastOk = null;
 let LG = "nba";                    // league of the leg being evaluated
@@ -273,7 +290,7 @@ function gameElapsedFrac(st){
   if(st.state==="post") return 1;
   if(st.state!=="in") return 0;
   const p = st.period||1, c = st.clock||0;
-  const q = st.lg==="nfl" ? 900 : 720;
+  const q = isFB(st.lg) ? 900 : 720;
   const el = p<=4 ? (p-1)*q + (q-c) : 4*q;
   return Math.min(1, Math.max(0, el/(4*q)));
 }
@@ -316,7 +333,7 @@ function parseBoxNFL(summary, g){
       const keys = cat.keys || [];
       for(const a of (cat.athletes||[])){
         const nm = a.athlete?.displayName || "", k = norm(nm);
-        const gk = g.id+"|"+k; const line = players.nfl[gk] || (players.nfl[gk] = {name:nm, id:a.athlete?.id, team:nick, abbr, gameId:g.id});
+        const gk = g.id+"|"+k; const pool = players[g.lg] || (players[g.lg] = {}); const line = pool[gk] || (pool[gk] = {name:nm, id:a.athlete?.id, team:nick, abbr, gameId:g.id});
         keys.forEach((key,i)=>{
           const dest = map[key]; if(!dest) return;
           const raw = (a.stats||[])[i];
@@ -390,7 +407,7 @@ async function refresh(){
     for(const lg in want){
       if(!LEAGUES[lg]) continue;
       for(const d of want[lg]){
-        const sb = await getJSON(`${LEAGUES[lg].api}/scoreboard?dates=${ymd(d)}`);
+        const sb = await getJSON(`${LEAGUES[lg].api}/scoreboard?dates=${ymd(d)}${LEAGUES[lg].sbExtra||""}`);
         if(lg==="ufc"){
           for(const ev of (sb.events||[])) for(const c of (ev.competitions||[])){
             const st = c.status||{}, cs = c.competitors||[];
@@ -421,11 +438,12 @@ async function refresh(){
     const needed = new Set();
     for(const b of BETS) for(const l of b.legs){ const g = findGame(l.game, l.league); if(g) needed.add(`${g.lg}:${g.id}`); }
     const toFetch = Object.values(games).filter(g => (g.state==="in"||g.state==="post") && needed.has(`${g.lg}:${g.id}`));
-    const fresh = {nba:{}, nfl:{}}; const old = players; players = fresh;
+    const fresh = {nba:{}, nfl:{}, ncaaf:{}}; const old = players; players = fresh;
     await Promise.all(toFetch.map(async g=>{
       try{
         if(g.lg==="ufc"){ await loadFightStats(g); return; }
-        const sm = await getJSON(`${LEAGUES[g.lg].api}/summary?event=${g.id}`); (g.lg==="nfl"?parseBoxNFL:parseBoxNBA)(sm, g);
+        const sm = await getJSON(`${LEAGUES[g.lg].api}/summary?event=${g.id}`); (isFB(g.lg)?parseBoxNFL:parseBoxNBA)(sm, g);
+        if(isFB(g.lg)){ const td = (sm.scoringPlays||[]).find(sp=>/touchdown/i.test(sp.type?.text||"") || sp.type?.abbreviation==="TD"); g.firstTD = td ? String(td.team?.id||"") : null; }
         const wp = (sm.winprobability||[]).slice(-1)[0];
         if(wp && wp.homeWinPercentage!=null && g.state==="in") g.homeWP = +wp.homeWinPercentage;
       }
@@ -506,7 +524,7 @@ const NFL_DEFAULT = {PASS_YDS:180, PASS_TD:1.1, CMP:18, ATT:28, INT:0.7, RUSH_YD
 const NFL_YARDS = {PASS_YDS:20, RUSH_YDS:12, REC_YDS:15, RUSH_REC_YDS:15, PASS_RUSH_YDS:20};       // variance per yard of mean
 const NFL_COUNT_VM = {REC:1.1, CMP:1.0, ATT:1.0, TGT:1.2, RUSH_ATT:1.1, PASS_TD:1.1, RUSH_TD:1.2, REC_TD:1.2, TD:1.2, INT:1.2, TACKLES:1.3, SACKS:1.4, DEF_INT:1.2, FGM:1.0, KICK_PTS:1.3};
 function playerProjNFL(name, stat, g){
-  const p = findPlayer(name, "nfl"), season = p?.id ? seasons["nfl:"+p.id] : null;
+  const p = findPlayer(name, LG), season = p?.id ? seasons[LG+":"+p.id] : null;
   const cur = statVal(p, stat), f = gameElapsedFrac(g);
   const comps = COMBO[stat] || [stat];
   const r0 = comps.reduce((s,c)=>s + (season && season[c]!=null && season[c]>0 ? season[c] : (NFL_DEFAULT[c] ?? 0)), 0);
@@ -518,7 +536,7 @@ function playerProjNFL(name, stat, g){
   return {cur, mean, v, p, cont};
 }
 function playerProj(name, stat, g){
-  if(LG==="nfl") return playerProjNFL(name, stat, g);
+  if(isFB(LG)) return playerProjNFL(name, stat, g);
   const p = findPlayer(name), season = p?.id ? seasons["nba:"+p.id] : null;
   const cur = statVal(p, stat), m = p?.MIN || 0, K = 20;
   const r0 = priorRate(season, stat), rate = (cur + K*r0)/(m + K);
@@ -561,6 +579,7 @@ function legProb(l, status){
   if(status==="void"||status==="push") return {p:1, src:"final"};
   LG = l.league || "nba"; CURG = (findGame(l.game)||{}).id || null;
   if(l.kind==="fightML") return fightProb(l, findGame(l.game, "ufc"));
+  if(l.kind==="firstTD") return {p: impliedProb(l.odds), src:"market", proj:"Settles on the first touchdown; uses the book's price until then"};
   const g = findGame(l.game);
   const mkt = impliedProb(l.odds);
   if(!g || g.state==="pre") return {p:mkt, src:"market"};
@@ -596,7 +615,7 @@ function legProb(l, status){
     let P=0; for(let x=0;x<d.length;x++){ const tot=S.cur+x; if(over ? tot>l.line : tot<l.line) P+=d[x]; }
     return {p:P, src:"model", proj:`Proj final: ${fmt(S.cur+S.mean)}`};
   }
-  const rf = 1-f, isHome = teamIsHome(g, l.team), nfl = l.league==="nfl";
+  const rf = 1-f, isHome = teamIsHome(g, l.team), nfl = isFB(l.league);
   const mine = isHome? g.home : g.away, opp = isHome? g.away : g.home, margin = mine.score-opp.score;
   const sdM = Math.max(0.5, (nfl?13.5:12.5)*Math.sqrt(rf));
   if(g.homeWP!=null && (l.kind==="ml" || l.kind==="spread")){
@@ -624,6 +643,17 @@ function spark(arr){
   if(!arr || arr.length<2) return "";
   const w=140,h=34, n=arr.length, pts=arr.map((v,i)=>`${(i/(n-1)*w).toFixed(1)},${(h-2-v*(h-4)).toFixed(1)}`).join(" ");
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><line x1="0" x2="${w}" y1="${h/2}" y2="${h/2}" stroke="#2a3346" stroke-dasharray="3 3"/><polyline fill="none" stroke="${pctColor(arr[n-1])}" stroke-width="2" points="${pts}"/></svg>`;
+}
+
+/* ---------- First touchdown ---------- */
+function evalFirstTD(l){
+  const g = findGame(l.game);
+  if(!g) return {status:"pending", html:`<div class="sub">${esc(l.game.away)} @ ${esc(l.game.home)} · game not found yet</div>`};
+  const mine = teamIsHome(g, l.team) ? g.home : g.away;
+  let status = g.state==="pre" ? "pending" : g.firstTD ? (g.firstTD===String(mine.tid) ? "win" : "loss") : g.state==="post" ? "loss" : "live";
+  const who = g.firstTD ? (g.firstTD===String(g.home.tid) ? g.home.abbr : g.away.abbr) : null;
+  const txt = who ? `First TD: ${esc(who)}` : g.state==="pre" ? "Waiting for kickoff" : "No touchdown yet";
+  return {status, g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${esc(g.away.abbr)} ${g.away.score} @ ${esc(g.home.abbr)} ${g.home.score} · ${esc(g.detail)}</div>`};
 }
 
 /* ---------- UFC ---------- */
@@ -666,6 +696,7 @@ function evalLeg(l){
   LG = l.league || "nba"; CURG = (findGame(l.game)||{}).id || null;
   if(l.settled) return {status: l.settled, html:`<div class="sub">Settled · ${l.settled==="win"?"won":l.settled==="loss"?"lost":l.settled}</div>`};
   if(l.kind==="fightML") return evalFight(l);
+  if(l.kind==="firstTD") return evalFirstTD(l);
   const g = findGame(l.game);
   const state = g?.state || "pre";
   const frac = g ? gameElapsedFrac(g) : 0;
@@ -684,7 +715,7 @@ function evalLeg(l){
       const dnp = ps.some(x => state!=="pre" && (!x.p || (x.p.dnp && state==="post")));
       const det = ps.map(x=>{
         const p=x.p; if(!p) return `${esc(x.n.split(" ").slice(-1)[0])}: —`;
-        if(LG==="nfl") return `${esc(p.name.split(" ").slice(-1)[0])} ${statVal(p,l.stat)}${nflLine(p)}`;
+        if(isFB(LG)) return `${esc(p.name.split(" ").slice(-1)[0])} ${statVal(p,l.stat)}${nflLine(p)}`;
         return `${esc(p.name.split(" ").slice(-1)[0])} ${statVal(p,l.stat)} · ${p.MIN}m${p.PF>=4?` · <span style="color:var(--warn)">${p.PF} PF</span>`:""}`;
       }).join("<br>");
       return {total, proj, dnp, det};
@@ -747,7 +778,7 @@ function evalLeg(l){
       if(over && pts>l.line) return {status:"win", g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${gameLine}</div>`};
     }
     let status = g.state==="pre" ? "pending" : g.state==="post" ? (push?"push":won?"win":"loss") : (busted?"loss":"live");
-    const possTeam = g.lg==="nfl" && g.state==="in" && g.poss ? (String(g.poss)===String(g.home.tid) ? g.home.abbr : String(g.poss)===String(g.away.tid) ? g.away.abbr : "") : "";
+    const possTeam = isFB(g.lg) && g.state==="in" && g.poss ? (String(g.poss)===String(g.home.tid) ? g.home.abbr : String(g.poss)===String(g.away.tid) ? g.away.abbr : "") : "";
     const sit = possTeam ? `<div class="sub" style="color:var(--text)">🏈 ${esc(possTeam)} ball${g.downText?` · ${esc(g.downText)}`:""}${g.redZone?' · <b style="color:var(--loss)">RED ZONE</b>':""}</div>` : "";
     return {status, g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div>${sit}<div class="sub">${gameLine}</div>`};
   }
@@ -766,6 +797,7 @@ function shortLabel(l){
   if(l.kind==="spread") return `${l.team} ${l.line>0?"+":""}${l.line}`;
   if(l.kind==="ml") return `${l.team} ML`;
   if(l.kind==="fightML") return `${last(l.fighter)} ML`;
+  if(l.kind==="firstTD") return `${l.team} 1st TD`;
   return `${l.kind==="teamTotal"?l.team+" ":""}${l.side==="under"?"U":"O"} ${l.line}`;
 }
 function fullLabel(l){
@@ -778,6 +810,7 @@ function fullLabel(l){
   if(l.kind==="spread") return `${l.team} ${l.line>0?"+":""}${l.line}`;
   if(l.kind==="ml") return `${l.team} Moneyline`;
   if(l.kind==="fightML") return `${l.fighter} to win`;
+  if(l.kind==="firstTD") return `${l.team} · First team to score a TD`;
   if(l.kind==="teamTotal") return `${l.team} Team Total ${l.side==="under"?"Under":"Over"} ${l.line}`;
   if(l.kind==="total") return `${l.game?`${l.game.away} @ ${l.game.home} `:""}${l.side==="under"?"Under":"Over"} ${l.line}`;
   return l.kind;
@@ -798,7 +831,7 @@ function render(){
   const betFights = new Set(); BETS.forEach(b=>b.legs.forEach(l=>{ if(l.kind==="fightML" && !l.settled){ const g=findGame(l.game,"ufc"); if(g) betFights.add(g.id); } }));
   const t = Object.values(games).filter(g=>g.lg!=="ufc" || betFights.has(g.id)).sort((a,b)=>new Date(a.start)-new Date(b.start));
   document.getElementById("ticker").innerHTML = t.map(g=>`
-    <div class="g ${g.state}"><div class="st" style="margin:0 0 3px">${LEAGUES[g.lg].label}${g.state==="in"&&g.lg==="nfl"&&g.downDist?` · ${esc(g.downDist)}${g.redZone?' · <b style="color:var(--loss)">RZ</b>':""}`:""}</div>${g.lg==="ufc" ? `<div class="row"><span>${esc(g.away.name)}</span><b>${g.away.winner?"W":""}</b></div><div class="row"><span>${esc(g.home.name)}</span><b>${g.home.winner?"W":""}</b></div>` : `<div class="row"><span>${esc(g.away.abbr)}</span><b>${g.state==="pre"?"":g.away.score}</b></div>
+    <div class="g ${g.state}"><div class="st" style="margin:0 0 3px">${LEAGUES[g.lg].label}${g.state==="in"&&isFB(g.lg)&&g.downDist?` · ${esc(g.downDist)}${g.redZone?' · <b style="color:var(--loss)">RZ</b>':""}`:""}</div>${g.lg==="ufc" ? `<div class="row"><span>${esc(g.away.name)}</span><b>${g.away.winner?"W":""}</b></div><div class="row"><span>${esc(g.home.name)}</span><b>${g.home.winner?"W":""}</b></div>` : `<div class="row"><span>${esc(g.away.abbr)}</span><b>${g.state==="pre"?"":g.away.score}</b></div>
     <div class="row"><span>${esc(g.home.abbr)}</span><b>${g.state==="pre"?"":g.home.score}</b></div>`}
     <div class="st">${esc(g.detail)}</div></div>`).join("") || `<span style="color:var(--muted)">No games loaded yet</span>`;
 
@@ -1062,7 +1095,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261116203501";
+const BUILD = "20261121122731";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
