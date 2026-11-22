@@ -263,9 +263,9 @@ const DEFAULT_BETS = [
     date: "2026-11-22",
     legs: [
       { kind:"h2h", stat:"RUSH_REC_YDS", a:["Omarion Hampton","Breece Hall"], b:["Keaton Mitchell","Braelon Allen"], tieWins:true,
-        game:{away:"Jets", home:"Chargers"}, label:"SGP: Hampton + Hall ≥ Mitchell + Allen · Rush+Rec Yds" },
+        estOdds:"-610", game:{away:"Jets", home:"Chargers"}, label:"SGP: Hampton + Hall ≥ Mitchell + Allen · Rush+Rec Yds" },
       { kind:"h2h", stat:"RUSH_REC_YDS", a:["Breece Hall","Braelon Allen"], b:["Omarion Hampton"], tieWins:true,
-        game:{away:"Jets", home:"Chargers"}, label:"SGP: Hall + Allen ≥ Hampton · Rush+Rec Yds" },
+        estOdds:"-610", game:{away:"Jets", home:"Chargers"}, label:"SGP: Hall + Allen ≥ Hampton · Rush+Rec Yds" },
       { kind:"h2h", stat:"PASS_YDS", a:["Bo Nix"], b:["Fernando Mendoza"], tieWins:true, odds:"-214",
         game:{away:"Raiders", home:"Broncos"}, label:"Bo Nix ≥ Fernando Mendoza · Pass Yds" },
       { kind:"h2h", stat:"REC_YDS", a:["Isaiah Likely","Malik Nabers"], b:["Parker Washington"], tieWins:true, odds:"-408",
@@ -620,13 +620,14 @@ function invPhi(p){
   q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
 }
 const teamIsHome = (g, team) => teamMatch(g.home, team) || (!teamMatch(g.away, team) && tnorm(g.home.full).includes(tnorm(team)));
+const legMkt = l => impliedProb(l.odds) ?? impliedProb(l.estOdds);
 const impliedProb = o => { const n=parseFloat(String(o||"").replace("+","")); if(isNaN(n)) return null; return n<0 ? -n/(-n+100) : 100/(n+100); };
 
 // returns {p: 0..1 or null, src:'model'|'market'|'final', proj:'text'}
 // Early in a game, lean on the book's price for the leg; shift to the live model as the game goes on
 function legProb(l, status){
   const r = legProbRaw(l, status);
-  const mkt = impliedProb(l.odds);
+  const mkt = legMkt(l);
   if(r && r.src==="model" && mkt!=null && (l.kind==="prop" || l.kind==="h2h")){
     LG = l.league || "nba"; const g = findGame(l.game);
     if(g && g.state==="in"){ const w = Math.min(1, gameElapsedFrac(g)*1.5); r.p = w*r.p + (1-w)*mkt; }
@@ -641,7 +642,7 @@ function legProbRaw(l, status){
   if(l.kind==="fightML") return fightProb(l, findGame(l.game, "ufc"));
   if(l.kind==="firstTD") return {p: impliedProb(l.odds), src:"market", proj:"Settles on the first touchdown; uses the book's price until then"};
   const g = findGame(l.game);
-  const mkt = impliedProb(l.odds);
+  const mkt = legMkt(l);
   if(!g || g.state==="pre") return {p:mkt, src:"market"};
   const f = gameElapsedFrac(g);
   if(l.kind==="h2h"){
@@ -1155,7 +1156,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261122150940";
+const BUILD = "20261122151116";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
