@@ -603,7 +603,17 @@ const teamIsHome = (g, team) => teamMatch(g.home, team) || (!teamMatch(g.away, t
 const impliedProb = o => { const n=parseFloat(String(o||"").replace("+","")); if(isNaN(n)) return null; return n<0 ? -n/(-n+100) : 100/(n+100); };
 
 // returns {p: 0..1 or null, src:'model'|'market'|'final', proj:'text'}
+// Early in a game, lean on the book's price for the leg; shift to the live model as the game goes on
 function legProb(l, status){
+  const r = legProbRaw(l, status);
+  const mkt = impliedProb(l.odds);
+  if(r && r.src==="model" && mkt!=null && (l.kind==="prop" || l.kind==="h2h")){
+    LG = l.league || "nba"; const g = findGame(l.game);
+    if(g && g.state==="in"){ const w = Math.min(1, gameElapsedFrac(g)*1.5); r.p = w*r.p + (1-w)*mkt; }
+  }
+  return r;
+}
+function legProbRaw(l, status){
   if(status==="win") return {p:1, src:"final"};
   if(status==="loss") return {p:0, src:"final"};
   if(status==="void"||status==="push") return {p:1, src:"final"};
@@ -1125,7 +1135,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261122120557";
+const BUILD = "20261122120714";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
