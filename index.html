@@ -231,6 +231,27 @@ const DEFAULT_BETS = [
       { kind:"firstTD", team:"Miami", odds:"-320", game:{away:"Virginia Tech", home:"Miami"} }
     ]
   }
+  ,{
+    id: "fd-2026-11-22-nfl-9leg",
+    league: "nfl",
+    book: "FanDuel",
+    title: "9 leg SGP+",
+    odds: "+486",
+    note: "Profit Boost 50% (was +325) · Saints–Bears SGP is -253",
+    stake: "50.00", toWin: "243.48",
+    date: "2026-11-22",
+    legs: [
+      { kind:"h2h", stat:"RUSH_YDS", a:["D'Andre Swift"], b:["Travis Etienne"], tieWins:true, game:{away:"Saints", home:"Bears"}, label:"SGP: D'Andre Swift ≥ Travis Etienne · Rush Yds" },
+      { kind:"prop", players:["D'Andre Swift","Travis Etienne","Kyle Monangai"], stat:"TD", side:"over", line:0.5, game:{away:"Saints", home:"Bears"}, label:"SGP: Swift + Etienne + Monangai · 1+ TD" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Baker Mayfield","Sione Vaki","Jahmyr Gibbs"], b:["Bucky Irving"], tieWins:true, odds:"-380", game:{away:"Buccaneers", home:"Lions"}, label:"Mayfield + Vaki + Gibbs ≥ Bucky Irving · Rush Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["George Pickens","CeeDee Lamb"], b:["Gunnar Helm","Carnell Tate"], tieWins:true, odds:"-550", game:{away:"Titans", home:"Cowboys"}, label:"Pickens + Lamb ≥ Helm + Tate · Rec Yds" },
+      { kind:"prop", players:["James Cook","Josh Allen"], stat:"TD", side:"over", line:0.5, odds:"-588", game:{away:"Dolphins", home:"Bills"}, label:"Cook + Allen · 1+ TD" },
+      { kind:"prop", players:["Derrick Henry","Chuba Hubbard","Zay Flowers"], stat:"TD", side:"over", line:0.5, odds:"-573", game:{away:"Ravens", home:"Panthers"}, label:"Henry + Hubbard + Flowers · 1+ TD" },
+      { kind:"h2h", stat:"REC_YDS", a:["Ashton Jeanty","Brock Bowers"], b:["Courtland Sutton"], tieWins:true, odds:"-624", game:{away:"Raiders", home:"Broncos"}, label:"Jeanty + Bowers ≥ Courtland Sutton · Rec Yds" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Trevor Lawrence","Bhayshul Tuten"], b:["Cam Skattebo"], tieWins:true, odds:"-253", game:{away:"Jaguars", home:"Giants"}, label:"Lawrence + Tuten ≥ Cam Skattebo · Rush Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Mike Evans","George Kittle"], b:["T.J. Hockenson"], tieWins:true, odds:"-567", game:{away:"Vikings", home:"49ers"}, label:"Evans + Kittle ≥ T.J. Hockenson · Rec Yds" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -1095,7 +1116,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261121122731";
+const BUILD = "20261122120406";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
