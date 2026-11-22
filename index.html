@@ -275,7 +275,7 @@ const store = {
   get(){ try{ const v = localStorage.getItem("betTracker.bets"); return v ? JSON.parse(v) : null; }catch(e){ return null; } },
   set(b){ try{ localStorage.setItem("betTracker.bets", JSON.stringify(b)); }catch(e){} }
 };
-function normalizeBets(arr){ (arr||[]).forEach(b=>{ b.league = (b.league||"nba").toLowerCase(); (b.legs||[]).forEach(l=>{ l.league = (l.league||b.league).toLowerCase(); }); }); return arr; }
+function normalizeBets(arr){ (arr||[]).forEach(b=>{ b.league = (b.league||"nba").toLowerCase(); (b.legs||[]).forEach(l=>{ l.league = (l.league||b.league).toLowerCase(); if(!l.date && b.date) l.date = b.date; if(l.game && b.date && !l.game.date) l.game.date = b.date; }); }); return arr; }
 const RETIRED = ["fd-2026-11-15-ne-det-sgp"];
 let BETS = normalizeBets((()=>{ const saved0 = store.get(); const saved = saved0 && saved0.filter(b=>!RETIRED.includes(b.id)); if(!saved) return DEFAULT_BETS;
   const removed = (()=>{ try{ return JSON.parse(localStorage.getItem("betTracker.removed")||"[]"); }catch(e){ return []; } })();
@@ -392,15 +392,24 @@ function findPlayer(name, lg=LG){
   return pick(exact) || pick(loose);
 }
 
+// team names: keep digits ("49ers") and match whole words, so "ers" never matches "Packers"
+const tnorm = s => (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
+function teamMatch(side, want){
+  const w = tnorm(want); if(!w) return false;
+  const pool = " "+tnorm(side.name+" "+side.abbr+" "+side.full)+" ";
+  return pool.includes(" "+w+" ");
+}
 function findGame(gm, lg=LG){
   if(!gm) return null;
-  const a = norm(gm.away), h = norm(gm.home);
+  let best = null;
   for(const id in games){
     const g = games[id]; if(g.lg!==lg) continue;
-    const ga = norm(g.away.name+" "+g.away.abbr+" "+g.away.full), gh = norm(g.home.name+" "+g.home.abbr+" "+g.home.full);
-    if((ga.includes(a) && gh.includes(h)) || (ga.includes(h) && gh.includes(a))) return g;
+    const ok = (teamMatch(g.away, gm.away) && teamMatch(g.home, gm.home)) || (teamMatch(g.away, gm.home) && teamMatch(g.home, gm.away));
+    if(!ok) continue;
+    if(!gm.date || g.date===gm.date) return g;     // same day as the bet: exact match
+    best = best || g;
   }
-  return null;
+  return gm.date ? null : best;
 }
 
 function statVal(p, stat){
@@ -590,7 +599,7 @@ function invPhi(p){
   if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
   q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
 }
-const teamIsHome = (g, team) => { const t = norm(team); return !!t && norm(g.home.name+" "+g.home.abbr+" "+g.home.full).split(" ").concat([norm(g.home.full)]).some(x=>x===t) || (!!t && norm(g.home.full).includes(t)); };
+const teamIsHome = (g, team) => teamMatch(g.home, team) || (!teamMatch(g.away, team) && tnorm(g.home.full).includes(tnorm(team)));
 const impliedProb = o => { const n=parseFloat(String(o||"").replace("+","")); if(isNaN(n)) return null; return n<0 ? -n/(-n+100) : 100/(n+100); };
 
 // returns {p: 0..1 or null, src:'model'|'market'|'final', proj:'text'}
@@ -1116,7 +1125,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261122120406";
+const BUILD = "20261122120557";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
