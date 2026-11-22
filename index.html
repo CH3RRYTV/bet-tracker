@@ -252,6 +252,26 @@ const DEFAULT_BETS = [
       { kind:"h2h", stat:"REC_YDS", a:["Mike Evans","George Kittle"], b:["T.J. Hockenson"], tieWins:true, odds:"-567", game:{away:"Vikings", home:"49ers"}, label:"Evans + Kittle ≥ T.J. Hockenson · Rec Yds" }
     ]
   }
+  ,{
+    id: "fd-2026-11-22-nfl-4leg",
+    league: "nfl",
+    book: "FanDuel",
+    title: "4 leg SGP+",
+    odds: "+168",
+    note: "Profit Boost 30% (was +129) · Jets–Chargers SGP is -282",
+    stake: "50.00", toWin: "84.16",
+    date: "2026-11-22",
+    legs: [
+      { kind:"h2h", stat:"RUSH_REC_YDS", a:["Omarion Hampton","Breece Hall"], b:["Keaton Mitchell","Braelon Allen"], tieWins:true,
+        game:{away:"Jets", home:"Chargers"}, label:"SGP: Hampton + Hall ≥ Mitchell + Allen · Rush+Rec Yds" },
+      { kind:"h2h", stat:"RUSH_REC_YDS", a:["Breece Hall","Braelon Allen"], b:["Omarion Hampton"], tieWins:true,
+        game:{away:"Jets", home:"Chargers"}, label:"SGP: Hall + Allen ≥ Hampton · Rush+Rec Yds" },
+      { kind:"h2h", stat:"PASS_YDS", a:["Bo Nix"], b:["Fernando Mendoza"], tieWins:true, odds:"-214",
+        game:{away:"Raiders", home:"Broncos"}, label:"Bo Nix ≥ Fernando Mendoza · Pass Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Isaiah Likely","Malik Nabers"], b:["Parker Washington"], tieWins:true, odds:"-408",
+        game:{away:"Jaguars", home:"Giants"}, label:"Likely + Nabers ≥ Parker Washington · Rec Yds" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -1135,7 +1155,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261122120714";
+const BUILD = "20261122150940";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
