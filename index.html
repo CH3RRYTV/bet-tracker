@@ -268,6 +268,22 @@ const DEFAULT_BETS = [
       { kind:"prop", players:["Brock Purdy"], stat:"PASS_RUSH_YDS", side:"over", line:189.5, estOdds:"-665", game:{away:"Vikings", home:"49ers"}, label:"Brock Purdy 190+ Pass+Rush Yds" }
     ]
   }
+  ,{
+    id: "fd-2026-11-23-cin-was-sgp",
+    league: "nfl",
+    book: "FanDuel",
+    title: "Bengals @ Commanders SGP",
+    odds: "+149",
+    note: "Profit Boost 30% (was +115)",
+    stake: "50.00", toWin: "74.71",
+    date: "2026-11-23",
+    legs: [
+      { kind:"h2h", stat:"PASS_YDS", a:["Joe Burrow"], b:["Jayden Daniels"], tieWins:true, estOdds:"-390", game:{away:"Bengals", home:"Commanders"}, label:"Joe Burrow ≥ Jayden Daniels · Pass Yds" },
+      { kind:"h2h", stat:"REC_YDS", a:["Ja'Marr Chase"], b:["Stefon Diggs"], tieWins:true, estOdds:"-390", game:{away:"Bengals", home:"Commanders"}, label:"Ja'Marr Chase ≥ Stefon Diggs · Rec Yds" },
+      { kind:"ml", team:"Bengals", tieWins:true, estOdds:"-390", game:{away:"Bengals", home:"Commanders"}, label:"Bengals · Win or tie" },
+      { kind:"prop", players:["Stefon Diggs"], stat:"REC_YDS", side:"over", line:20.5, estOdds:"-390", game:{away:"Bengals", home:"Commanders"}, label:"Stefon Diggs 21+ Rec Yds" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -824,7 +840,7 @@ function evalLeg(l){
     const mine = isHome? g.home : g.away, opp = isHome? g.away : g.home;
     let val, target, txt, won, push=false, busted=false;
     if(l.kind==="spread"){ val = mine.score - opp.score + l.line; won = val>0; push = val===0; txt = `${esc(mine.abbr)} ${l.line>0?"+":""}${l.line} · margin ${mine.score-opp.score>0?"+":""}${mine.score-opp.score} → ${val>0?"covering by":"short by"} ${fmt(Math.abs(val))}`; }
-    if(l.kind==="ml"){ val = mine.score-opp.score; won = val>0; txt = `${esc(mine.abbr)} ML · ${val===0?"tied":(val>0?"leading by ":"trailing by ")+Math.abs(val)}`; }
+    if(l.kind==="ml"){ val = mine.score-opp.score; won = val>0 || (l.tieWins && val===0); txt = `${esc(mine.abbr)} ML · ${val===0?"tied":(val>0?"leading by ":"trailing by ")+Math.abs(val)}`; }
     if(l.kind==="total"||l.kind==="teamTotal"){
       const pts = l.kind==="total" ? g.home.score+g.away.score : mine.score;
       const over = l.side!=="under", proj = g.state==="in"&&gameElapsedFrac(g)>=0.15 ? pts/gameElapsedFrac(g) : pts;
@@ -1152,7 +1168,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261122191347";
+const BUILD = "20261123193108";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
