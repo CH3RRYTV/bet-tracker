@@ -717,7 +717,10 @@ function legProbRaw(l, status){
   if(l.kind==="ml") return {p:1-Phi((0.5-margin-0.5)/sdM), src:"model"};
   if(l.kind==="total"||l.kind==="teamTotal"){
     const pts = l.kind==="total" ? g.home.score+g.away.score : mine.score;
-    const mean = pts + rf*(f*(f>0.05?pts/f:l.line) + (1-f)*l.line);
+    // starting guess: the line for game totals; a normal scoring pace for team totals (alt lines can sit far from it)
+    const TEAM_AVG = {nfl:22, ncaaf:28, nba:114};
+    const base = l.kind==="teamTotal" ? Math.max(l.line, TEAM_AVG[l.league]||l.line) : l.line;
+    const mean = pts + rf*(f*(f>0.05?pts/f:base) + (1-f)*base);
     const sd = Math.max(0.5, (l.kind==="total"?(nfl?13.5:15):(nfl?9.5:10))*Math.sqrt(rf));
     const pOver = 1-Phi((l.line-mean)/sd);
     return {p: l.side==="under"?1-pOver:pOver, src:"model", proj:`Proj final: ${fmt(mean)}`};
@@ -1183,7 +1186,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261125195806";
+const BUILD = "20261125195932";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
