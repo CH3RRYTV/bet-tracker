@@ -305,6 +305,22 @@ const DEFAULT_BETS = [
       { kind:"teamTotal", team:"Packers", side:"over", line:9.5, estOdds:"-545", game:{away:"Packers", home:"Rams"}, label:"Packers Over 9.5 Points" }
     ]
   }
+  ,{
+    id: "fd-2026-11-26-nfl-4leg",
+    league: "nfl",
+    book: "FanDuel",
+    title: "Thanksgiving 4 leg SGP+",
+    odds: "+128",
+    note: "Profit Boost 50% · Chiefs–Bills SGP is -327",
+    stake: "75.00", toWin: "96.04",
+    date: "2026-11-26",
+    legs: [
+      { kind:"h2h", stat:"RUSH_YDS", a:["Patrick Mahomes","Josh Allen","James Cook"], b:["Emmett Johnson"], tieWins:true, estOdds:"-700", game:{away:"Chiefs", home:"Bills"}, label:"SGP: Mahomes + Allen + Cook ≥ Emmett Johnson · Rush Yds" },
+      { kind:"prop", players:["Emmett Johnson","Josh Allen","James Cook"], stat:"TD", side:"over", line:0.5, estOdds:"-700", game:{away:"Chiefs", home:"Bills"}, label:"SGP: E. Johnson + Allen + Cook · 1+ TD" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Sione Vaki","Jahmyr Gibbs"], b:["Luther Burden III","Kyle Monangai"], tieWins:true, odds:"-518", game:{away:"Bears", home:"Lions"}, label:"Vaki + Gibbs ≥ Burden + Monangai · Rush Yds" },
+      { kind:"prop", players:["Javonte Williams","Saquon Barkley"], stat:"TD", side:"over", line:0.5, odds:"-314", game:{away:"Eagles", home:"Cowboys"}, label:"Javonte Williams + Saquon Barkley · 1+ TD" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -1199,7 +1215,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261125200234";
+const BUILD = "20261126103400";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
