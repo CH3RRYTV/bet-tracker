@@ -872,12 +872,19 @@ function evalLeg(l){
       if(over && pts>l.line && g.state==="in") { /* already over */ }
       if(!over && pts>l.line) busted = true;
       txt = `${l.kind==="teamTotal"?esc(mine.abbr)+" ":""}${over?"Over":"Under"} ${l.line} · now ${pts}${g.state==="in"?` · pace ${fmt(proj)}`:""}`;
-      if(over && pts>l.line) return {status:"win", g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${gameLine}</div>`};
+      if(over && pts>l.line) return {status:"win", g, html:`<div class="big win" style="font-size:22px;margin-top:6px">${txt}</div><div class="sub">${gameLine}</div>`};
     }
     let status = g.state==="pre" ? "pending" : g.state==="post" ? (push?"push":won?"win":"loss") : (busted?"loss":"live");
+    let teamWinning = won;
+    if((l.kind==="total"||l.kind==="teamTotal") && g.state==="in"){
+      const ptsNow = l.kind==="total" ? g.home.score+g.away.score : mine.score, f2 = gameElapsedFrac(g);
+      const TEAM_AVG2 = {nfl:22, ncaaf:28, nba:114}, base2 = l.kind==="teamTotal" ? Math.max(l.line, TEAM_AVG2[l.league]||l.line) : l.line;
+      const projNow = ptsNow + (1-f2)*(f2*(f2>0.05?ptsNow/f2:base2) + (1-f2)*base2);
+      teamWinning = l.side==="under" ? projNow < l.line : projNow > l.line;
+    }
     const possTeam = isFB(g.lg) && g.state==="in" && g.poss ? (String(g.poss)===String(g.home.tid) ? g.home.abbr : String(g.poss)===String(g.away.tid) ? g.away.abbr : "") : "";
     const sit = possTeam ? `<div class="sub" style="color:var(--text)">🏈 ${esc(possTeam)} ball${g.downText?` · ${esc(g.downText)}`:""}${g.redZone?' · <b style="color:var(--loss)">RED ZONE</b>':""}</div>` : "";
-    return {status, g, html:`<div class="big" style="font-size:22px;margin-top:6px">${txt}</div>${sit}<div class="sub">${gameLine}</div>`};
+    return {status, g, html:`<div class="big ${g.state==="pre"?"":(teamWinning?"win":"lose")}" style="font-size:22px;margin-top:6px">${txt}</div>${sit}<div class="sub">${gameLine}</div>`};
   }
   return {status:"pending", html:`<div class="sub">Unsupported leg</div>`};
 }
@@ -1192,7 +1199,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261125200114";
+const BUILD = "20261125200234";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
