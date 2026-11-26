@@ -284,6 +284,21 @@ const DEFAULT_BETS = [
       { kind:"prop", players:["Stefon Diggs"], stat:"REC_YDS", side:"over", line:20.5, estOdds:"-390", game:{away:"Bengals", home:"Commanders"}, label:"Stefon Diggs 21+ Rec Yds" }
     ]
   }
+  ,{
+    id: "fd-2026-11-25-gb-lar-sgp",
+    league: "nfl",
+    book: "FanDuel",
+    title: "Packers @ Rams SGP",
+    odds: "-104",
+    note: "Profit Boost 50% (was -157) · send the bottom of the slip for stake/payout",
+    date: "2026-11-25",
+    legs: [
+      { kind:"h2h", stat:"REC_YDS", a:["Matthew Golden","Christian Watson"], b:["Tyler Higbee","Konata Mumpfield"], tieWins:true, estOdds:"-545", game:{away:"Packers", home:"Rams"}, label:"Golden + Watson ≥ Higbee + Mumpfield · Rec Yds" },
+      { kind:"h2h", stat:"RUSH_YDS", a:["Kyren Williams","Blake Corum"], b:["MarShawn Lloyd","Kaleb Johnson"], tieWins:true, estOdds:"-545", game:{away:"Packers", home:"Rams"}, label:"K. Williams + Corum ≥ Lloyd + K. Johnson · Rush Yds" },
+      { kind:"prop", players:["Kyren Williams","Blake Corum","Matthew Golden"], stat:"TD", side:"over", line:0.5, estOdds:"-545", game:{away:"Packers", home:"Rams"}, label:"K. Williams + Corum + Golden · 1+ TD" },
+      { kind:"teamTotal", team:"Packers", side:"over", line:9.5, estOdds:"-545", game:{away:"Packers", home:"Rams"}, label:"Packers Over 9.5 Points" }
+    ]
+  }
 ];
 /* Leg kinds supported:
    prop:   {kind:"prop", players:["Name"], stat:"PTS|REB|AST|3PM|STL|BLK|TO|PRA|PR|PA|RA|STOCKS", side:"over|under", line:24.5, game:{away,home}}
@@ -1168,7 +1183,7 @@ render();
 refresh();
 
 // Auto-update: every minute, check whether a newer version of this page has been published; if so, reload into it
-const BUILD = "20261123193108";
+const BUILD = "20261125195806";
 setInterval(async ()=>{
   try{
     if(location.protocol==="file:") return;
